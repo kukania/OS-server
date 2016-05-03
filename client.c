@@ -1,42 +1,108 @@
 #include<stdio.h>
-#include<sys/types.h>
-#include<sys/socket.h>
-#include<netinet/in.h>
 #include<stdlib.h>
 #include<string.h>
+#include<unistd.h>
+#include<arpa/inet.h>
+#include<sys/socket.h>
+#include<fcntl.h>
+
 #define BUFSIZE 1024
-#define PORT 7890
-void main(int argc, char *argv[]){
-	int s,n;
-	char *haddr;
-	struct sockaddr_in server_addr;
-	char buf[BUFSIZE];
 
-	if(argc!=2){
-		printf("Usage : %s IP\n",argv[0]);
-		exit(0);
+void error_handling(char *message);
+void showMenu();
+void sendFile(int sock);
+int main(int argc, char *argv[]){
+	int sock;
+	char message[BUFSIZE];
+	int str_len;
+	struct sockaddr_in serv_adr;
+	if(argc!=3){
+		printf("Usage : %s <IP> <port>\n",argv[0]);
+		exit(1);
 	}
 
-	haddr=argv[1];
-
-	if((s=socket(PF_INET,SOCK_STREAM,0))<0){
-		printf("can't create socket");
-		exit(0);
+	sock=socket(PF_INET,SOCK_STREAM,0);
+	if(sock==-1){
+		error_handling("sock error");	
 	}
 
-	bzero((char*)&server_addr,sizeof(server_addr));
-	server_addr.sin_family=AF_INET;
-	server_addr.sin_addr.s_addr=inet_addr(argv[1]);
-	server_addr.sin_port=htons(PORT);
+	memset(&serv_adr,0,sizeof(serv_adr));
+	serv_adr.sin_family=AF_INET;
+	serv_adr.sin_addr.s_addr=inet_addr(argv[1]);
+	serv_adr.sin_port=htons(atoi(argv[2]));
+
+	if(connect(sock,(struct sockaddr*)&serv_adr,sizeof(serv_adr))==-1){
+		error_handling("connect error!");
+	}
+	else 
+		puts("connected ......");
+
+	while(1){
+		showMenu();
+		printf("\nINPUT message: ");
+		scanf("%s",message);
+		
+		if(!strcmp(message,"q")||!strcmp(message,"Q"))
+			break;
+		
+		char input=message[0];
+		write(sock,message,strlen(message));
+		str_len=read(sock,message,BUFSIZE-1);
+		message[str_len]='\0';
+		printf("Server : %s\n",message);
+		switch(input){
+			case '1':
+			//	printf("you selected menu 1\n");		
+				sendFile(sock);
+				break;
+			case '2':
+				break;
+		}
+
+		//write(sock,message,strlen(message));
+		//str_len=read(sock,message,BUFSIZE-1);
+		//message[str_len]='\0';
+		//printf("SERVER : %s",message);
+	}
+	close(sock);
+	return 0;
+}
+void sendFile(int sock){
+	char message[BUFSIZE];
+	int str_len;
 	
-	if(connect(s,(struct sockaddr*)&server_addr,sizeof(server_addr))<0){
-		printf("connect error!\n");
-		exit(0);
+	fputs("input the send executable :",stdout);
+	scanf("%s",message);
+	fflush(stdin);
+	int fd=open(message,O_RDONLY);
+	
+	write(sock,message,strlen(message));
+	read(sock,message,BUFSIZE-1);
+	if(fd==-1)
+		error_handling("file error!");
+	if(message[0]=='0'){
+		error_handling("server error!");
 	}
+	
+	while((str_len=read(fd,message,BUFSIZE))!=0){
+		write(sock,message,str_len);
+	}
+	
+	str_len=read(sock,message,BUFSIZE-1);
+	message[str_len]=0;
+	printf("%s : ",message);
+	scanf("%s",message);
 
-	while((n=read(s,buf,BUFSIZE)>0)){
-		buf[n]='\0';
-		printf("Server : %s\n",buf);
-	}
-	close(s);
+	write(sock,message,strlen(message));
+	close(fd);	
+}
+void showMenu(){
+	fputs("1. send program and argument!\n",stdout);
+	fputs("2. check program state\n",stdout);
+	fputs("3. input 'q' or 'Q' for exit program\n",stdout);
+}
+void error_handling(char *message){
+	fputs(message,stderr);
+	fputs("\n",stderr);
+	exit(1);
 }
