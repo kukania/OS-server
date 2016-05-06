@@ -94,27 +94,44 @@ void getFileFromC(int sock){
 	strcat(fileName,message);
 	printf("make %s to %s\n",message,fileName);
 	
-	int fd=open(fileName,O_WRONLY|O_CREAT|O_EXCL,0644);
+	int fd=open(fileName,O_WRONLY|O_CREAT,0644);
 	if(fd==-1){
 		write(sock,"0",strlen("0"));
 		error_handling("file open error!");
 	}
 	else write(sock,"1",strlen("1"));
 
-	while((str_len=read(sock,message,BUFSIZE))!=0){
-		write(fd,message,str_len);
-	}
+    /*get file size*/
+    str_len=read(sock,message,BUFSIZE);
+    message[str_len]=0;
+    int sizeofFile=atoi(message);
+    printf("file size: %d\n",sizeofFile);
 
-	if(shutdown(sock,SHUT_WR)==-1){
-		error_handling("shut down error!");
+    int getFile=0;
+    int tempBufSize=1024;
+	while((str_len=read(sock,message,tempBufSize))!=0){
+		write(fd,message,str_len);
+        printf("read size : %d\n",str_len);
+        getFile+=str_len;
+        if(sizeofFile==getFile)
+            break;
+        if(sizeofFile<getFile+tempBufSize){
+            tempBufSize=sizeofFile-getFile;
+        }
 	}
+    printf("read complete!\n");
+
+	//if(shutdown(sock,SHUT_WR)==-1){
+	//	error_handling("shut down error!");
+	//}
 	
 	memset(message,0,sizeof(message));
-	write(sock,"input the argument-",strlen("input the argument-"));
+	write(sock,"input the argument option one :",strlen("input the argument option one:"));
 	str_len=read(sock,message,BUFSIZE-1);
 	message[str_len]=0;
 	int itemNum=parseitems(message,items);
 	int i;
+    printf("read argument = %d\n",itemNum);
 	for(i=0; i<itemNum; i++){
 		printf("%s\n",items[i]);
 	}

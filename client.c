@@ -4,6 +4,7 @@
 #include<unistd.h>
 #include<arpa/inet.h>
 #include<sys/socket.h>
+#include<sys/stat.h>
 #include<fcntl.h>
 
 #define BUFSIZE 1024
@@ -75,7 +76,10 @@ void sendFile(int sock){
 	scanf("%s",message);
 	fflush(stdin);
 	int fd=open(message,O_RDONLY);
-	
+	struct stat st;
+    stat(message,&st);
+    printf("file size : %d\n\n",(int)st.st_size);
+
 	write(sock,message,strlen(message));
 	read(sock,message,BUFSIZE-1);
 	if(fd==-1)
@@ -83,16 +87,25 @@ void sendFile(int sock){
 	if(message[0]=='0'){
 		error_handling("server error!");
 	}
-	
+    /*send file size here*/
+    int tempSize=(int)st.st_size;
+    sprintf(message,"%d",tempSize);
+    write(sock,message,strlen(message));
+
 	while((str_len=read(fd,message,BUFSIZE))!=0){
 		write(sock,message,str_len);
+        message[str_len]='\0';
+        printf("read size: %d\n",str_len);
 	}
 	
-	str_len=read(sock,message,BUFSIZE-1);
-	message[str_len]=0;
-	printf("%s : ",message);
-	scanf("%s",message);
 
+	str_len=read(sock,message,BUFSIZE-1);
+	message[str_len]='\0';
+	printf("%s : ",message);
+    scanf("%s",message);
+    // memset(message,0,sizeof(message));
+    //fgets(message,sizeof(message),stdin);
+    
 	write(sock,message,strlen(message));
 	close(fd);	
 }
