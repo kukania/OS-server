@@ -94,7 +94,7 @@ void getFileFromC(int sock){
 	strcat(fileName,message);
 	printf("make %s to %s\n",message,fileName);
 	
-	int fd=open(fileName,O_WRONLY|O_CREAT,0644);
+	int fd=open(fileName,O_WRONLY|O_CREAT,0777);
 	if(fd==-1){
 		write(sock,"0",strlen("0"));
 		error_handling("file open error!");
@@ -113,10 +113,12 @@ void getFileFromC(int sock){
 		write(fd,message,str_len);
         printf("read size : %d\n",str_len);
         getFile+=str_len;
-        if(sizeofFile==getFile)
-            break;
         if(sizeofFile<getFile+tempBufSize){
             tempBufSize=sizeofFile-getFile;
+        }
+        if(tempBufSize==0){
+            close(fd);
+            break;
         }
 	}
     printf("read complete!\n");
