@@ -10,6 +10,13 @@
 
 #define BUFSIZE 1024
 #define MAXLEN 100
+extern char **environ;
+struct CLIENT{
+    int pidA[5];
+    void* pid[5];
+    int pidIndex;
+};
+struct CLIENT c;
 void error_handling(char *message);
 void read_childproc(int sig);
 void handleClient(int clnt);
@@ -122,10 +129,6 @@ void getFileFromC(int sock){
         }
 	}
     printf("read complete!\n");
-
-	//if(shutdown(sock,SHUT_WR)==-1){
-	//	error_handling("shut down error!");
-	//}
 	
 	memset(message,0,sizeof(message));
 	write(sock,"input the argument option one :",strlen("input the argument option one:"));
@@ -137,6 +140,28 @@ void getFileFromC(int sock){
 	for(i=0; i<itemNum; i++){
 		printf("%s\n",items[i]);
 	}
+    /*setting for execv*/
+    char *myArgv[MAXLEN];
+    myArgv[0]=&fileName;
+    pid_t pid;
+    for(i=1; i<itemNum; i++)
+        myArgv[i]=&items[i];
+    if(c.pidIndex>4){
+        sprintf(message,"too many process running now wait:%d",c.pidIndex);
+        write(sock,message,strlen(message));
+        return;
+    }
+    else{
+        if((pid=fork())==0){
+            sprintf(message,"./%s",fileName);
+            int errorCode= execvpe(message,myArgv,environ);
+            printf("%d running result : %d",getpid(),errorCode);
+            exit(1);
+        }
+        else{
+            c.pidA[c.pidIndex++]=pid;
+        }
+    }
 }
 void handleClient(int sock){
 	int str_len;
