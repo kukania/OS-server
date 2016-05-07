@@ -97,7 +97,7 @@ void sendFile(int sock){
         message[str_len]='\0';
         printf("read size: %d\n",str_len);
 	}
-	
+    close(fd);
 
 	str_len=read(sock,message,BUFSIZE-1);
 	message[str_len]='\0';
@@ -107,7 +107,9 @@ void sendFile(int sock){
     //fgets(message,sizeof(message),stdin);
     
 	write(sock,message,strlen(message));
-	close(fd);	
+    str_len=read(sock,message,BUFSIZE-1);
+    message[str_len]='\0';
+    printf("Server : %s\n",message);	
 }
 void showMenu(){
 	fputs("1. send program and argument!\n",stdout);

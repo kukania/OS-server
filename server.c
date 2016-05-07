@@ -76,7 +76,8 @@ int main(int argc, char *argv[]){
 		}
 		if(pid==0){
 			close(serv_sock);
-			
+
+			printf("%d processing client...",getpid());
 			handleClient(clnt_sock);
 
 			close(clnt_sock);
@@ -153,12 +154,15 @@ void getFileFromC(int sock){
     }
     else{
         if((pid=fork())==0){
+            close(sock);
             sprintf(message,"./%s",fileName);
             int errorCode= execvpe(message,myArgv,environ);
-            printf("%d running result : %d",getpid(),errorCode);
-            exit(1);
+            printf("hello! from %d \n",getpid());
+            exit(errorCode);
         }
         else{
+            sprintf(message,"%d do your job",getpid());
+            write(sock,message,strlen(message));
             c.pidA[c.pidIndex++]=pid;
         }
     }
