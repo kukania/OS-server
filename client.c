@@ -78,7 +78,7 @@ void checkProc(sock){
 
     int pid;
     scanf(" %d",&pid);
-    printf("%d selected",pid);
+    printf("%d selected\n",pid);
     sprintf(message,"%d",pid);
     write(sock,message,strlen(message));
     
