@@ -85,7 +85,8 @@ void checkProc(sock){
     str_len=read(sock,message,BUFSIZE-1);
     message[str_len]='\0';
     int state=atoi(message);
-
+    printf("state : %d\n",state);
+    write(sock,message,strlen(message));
     if(state==1){
         printf("[%d]running \n",pid);
     }
@@ -93,8 +94,18 @@ void checkProc(sock){
         printf("no process in server [%d]\n",pid);
     }
     else if(state==2){
-        printf("test\n");
+        printf("the job is done!\n");
+        printf("the result is...\n");
+        int flag=0;
+        while((str_len=read(sock,message,BUFSIZE-1))!=0){
+            if(str_len==1)
+                break;
+            message[str_len]='\0';
+            printf("%s",message);
+        }
     }
+    printf("\n");
+    close(sock);
 }
 void sendFile(int sock){
     char message[BUFSIZE];
@@ -131,6 +142,7 @@ void sendFile(int sock){
     str_len=read(sock,message,BUFSIZE-1);
     message[str_len]='\0';
     printf("Server : %s\n",message);
+    close(sock);
 }
 void showMenu(){
     fputs("1. send program and argument!\n",stdout);

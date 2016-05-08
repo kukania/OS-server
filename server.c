@@ -20,7 +20,6 @@ struct PID{
     char file[MAXLEN];
 };
 typedef struct SHM{
-    int pidIndex;
     int size;
     struct PID pidA[MAXLEN];
     pthread_mutex_t mutex;
@@ -139,7 +138,7 @@ void getFileFromC(int sock){
     int tempBufSize=1024;
     while((str_len=read(sock,message,tempBufSize))!=0){
         write(fd,message,str_len);
-        printf("read size : %d\n",str_len);
+        //printf("read size : %d\n",str_len);
         getFile+=str_len;
         if(sizeofFile<getFile+tempBufSize){
             tempBufSize=sizeofFile-getFile;
@@ -194,10 +193,9 @@ void getFileFromC(int sock){
         /*shared memory use*/
         pthread_mutex_lock(&(client->mutex));
         client->size++;
-        client->pidA[client->pidIndex].pid=pid;
-        strcpy(client->pidA[client->pidIndex].file,fileName);
-        client->pidA[client->pidIndex].state=1;
-        client->pidIndex=(client->pidIndex+1)%MAXLEN;
+        client->pidA[client->size-1].pid=pid;
+        strcpy(client->pidA[client->size-1].file,fileName);
+        client->pidA[client->size-1].state=1;
         printf("-----------size - %d\n",client->size);
         pthread_mutex_unlock(&(client->mutex));
         int status;
@@ -207,9 +205,10 @@ void getFileFromC(int sock){
 
         pthread_mutex_lock(&(client->mutex));
         int i;
-        for(i=0; i<client->size; i++){
+        for(i=0; i<MAXLEN; i++){
             if(client->pidA[i].pid==pid){
                 client->pidA[i].state=2;
+                break;
             }
             printf("%d:[%d]-state:%d-fileName:%s\n",i,client->pidA[i].pid,client->pidA[i].state,client->pidA[i].file);
         }
@@ -231,26 +230,46 @@ void getStatus(int sock){
     /*shared memory setting*/
     SHM *client=(SHM*)shmat(mem_id,NULL,0);
     pthread_mutex_lock(&(client->mutex));
-    int i;
-
+    printf("test\n");
+    int i,j,k;
     //good queuing in this setting
     for(i=0; i<client->size; i++){
+        printf("%d : checking\n",i);
         if(client->pidA[i].pid==pid){
             state=client->pidA[i].state;
             strcpy(fileName,client->pidA[i].file);
-            if(state==2)
+            if(state==2){
+                for(j=i;j<client->size-1; j++){
+                    client->pidA[j].pid=client->pidA[j+1].pid;
+                    client->pidA[j].state=client->pidA[j+1].state;
+                    strcpy(client->pidA[j].file,client->pidA[j+1].file);
+                }
                 client->size--;
+            }
+            break;
         }
     }
     pthread_mutex_unlock(&(client->mutex));
 
     sprintf(message,"%d",state);
     write(sock,message,strlen(message));
-    
+    read(sock,message,BUFSIZE-1);   
     if(state==2){
-        printf("test");
+        sprintf(message,"%s.txt",fileName);
+        printf("%s read\n",message);
+        int fd=open(message,O_RDONLY);
+        while((str_len=read(fd,message,BUFSIZE-1))!=0){
+            write(sock,message,str_len);
+            message[str_len]='\0';
+            printf("%s\n",message);
+        }
+        close(fd);
+        close(sock);
     }
-    else return;
+    else{
+        close(sock);
+        return;
+    }
 }
 void handleClient(int sock){
     int str_len;
