@@ -9,6 +9,7 @@
 #include<fcntl.h>
 #include<pthread.h>
 #include<sys/shm.h>
+#include<time.h>
 
 #define BUFSIZE 1024
 #define MAXLEN 100
@@ -17,6 +18,7 @@
 struct PID{
     int pid;
     int state;
+    float runningTime;
     char file[MAXLEN];
 };
 typedef struct SHM{
@@ -148,7 +150,6 @@ void getFileFromC(int sock){
             break;
         }
     }
-    
     pid_t pid;
     sprintf(message,"./%s",fileName);
     /*make pipe for save result!*/
@@ -165,7 +166,11 @@ void getFileFromC(int sock){
         close(sock);
     }
     pthread_mutex_unlock(&(client->mutex));
-
+    
+    /*time check*/
+    time_t startTime=0, endTime=0;
+    startTime=clock();
+   
     if(result<0){
         error_handling("pipe error");
     }
@@ -202,12 +207,14 @@ void getFileFromC(int sock){
         sprintf(message,"[%d] do your job!",pid);
         write(sock,message,strlen(message));
         wait(&status);
+        endTime=clock();
 
         pthread_mutex_lock(&(client->mutex));
         int i;
         for(i=0; i<MAXLEN; i++){
             if(client->pidA[i].pid==pid){
                 client->pidA[i].state=2;
+                client->pidA[i].runningTime=(float)(endTime-startTime)/(CLOCKS_PER_SEC);
                 break;
             }
             printf("%d:[%d]-state:%d-fileName:%s\n",i,client->pidA[i].pid,client->pidA[i].state,client->pidA[i].file);
@@ -230,7 +237,7 @@ void getStatus(int sock){
     /*shared memory setting*/
     SHM *client=(SHM*)shmat(mem_id,NULL,0);
     pthread_mutex_lock(&(client->mutex));
-    printf("test\n");
+    float runningTime;
     int i,j,k;
     //good queuing in this setting
     for(i=0; i<client->size; i++){
@@ -238,10 +245,12 @@ void getStatus(int sock){
         if(client->pidA[i].pid==pid){
             state=client->pidA[i].state;
             strcpy(fileName,client->pidA[i].file);
+            runningTime=client->pidA[i].runningTime;
             if(state==2){
                 for(j=i;j<client->size-1; j++){
                     client->pidA[j].pid=client->pidA[j+1].pid;
                     client->pidA[j].state=client->pidA[j+1].state;
+                    client->pidA[j].runningTime=client->pidA[j+1].runningTime;
                     strcpy(client->pidA[j].file,client->pidA[j+1].file);
                 }
                 client->size--;
@@ -254,6 +263,11 @@ void getStatus(int sock){
     sprintf(message,"%d",state);
     write(sock,message,strlen(message));
     read(sock,message,BUFSIZE-1);   
+
+    sprintf(message,"running time : %f",runningTime);
+    write(sock,message,strlen(message));
+    read(sock,message,BUFSIZE-1);
+
     if(state==2){
         sprintf(message,"%s.txt",fileName);
         printf("%s read\n",message);
@@ -285,7 +299,7 @@ void handleClient(int sock){
             break;
         case '2':
             printf("%d select menu 2\n",getpid());
-            write(sock,"menu 2 selected",strlen("menu 2 selected"));
+     //     write(sock,"menu 2 selected",strlen("menu 2 selected"));
             getStatus(sock);
             break;
     }

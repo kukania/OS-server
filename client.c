@@ -71,7 +71,7 @@ int main(int argc, char *argv[]){
 }
 void checkProc(sock){
     char message[BUFSIZE];
-    int str_len;
+    int str_len=0;
  //   str_len=read(sock,message,BUFSIZE-1);
     message[str_len]='\0';
     printf("Input pid :");
@@ -87,6 +87,12 @@ void checkProc(sock){
     int state=atoi(message);
     printf("state : %d\n",state);
     write(sock,message,strlen(message));
+
+    str_len=read(sock,message,BUFSIZE-1);
+    message[str_len]='\0';
+    printf("%s\n",message);
+    write(sock,message,strlen(message));
+
     if(state==1){
         printf("[%d]running \n",pid);
     }
