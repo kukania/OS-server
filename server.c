@@ -26,6 +26,7 @@ typedef struct SHM{
     struct PID pidA[MAXLEN];
     pthread_mutex_t mutex;
 }SHM;
+int fileNum;
 //shared memory struct
 int mem_id;//shared memory id
 extern char **environ;
@@ -79,6 +80,7 @@ int main(int argc, char *argv[]){
             continue;
         else
             puts("new client connected...");
+        fileNum++;
         pid=fork();
         if(pid==-1){
             close(clnt_sock);
@@ -110,6 +112,7 @@ void getFileFromC(int sock){
     message[str_len]=0;
     printf("%d > send file %s\n",getpid(),message);
     strcat(fileName,message);
+    sprintf(fileName,"%s_%d",fileName,fileNum);
     printf("make %s to %s\n",message,fileName);
 
     int fd=open(fileName,O_WRONLY|O_CREAT,0777);
@@ -191,11 +194,13 @@ void getFileFromC(int sock){
         strcpy(client->pidA[client->size-1].file,fileName);
         client->pidA[client->size-1].state=1;
         printf("-----------size - %d\n",client->size);
+
         pthread_mutex_unlock(&(client->mutex));
         int status;
         sprintf(message,"%d",pid);
         write(sock,message,strlen(message));
         wait(&status);
+        
         endTime=clock();
 
         pthread_mutex_lock(&(client->mutex));

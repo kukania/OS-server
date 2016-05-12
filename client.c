@@ -123,9 +123,10 @@ void checkProc(int sock,int index){
     else{
         pid=index;
     }
+
+    sprintf(message,"%d",pid);
     write(sock,message,strlen(message));
     
-    sprintf(message,"%d",pid);
     str_len=read(sock,message,BUFSIZE-1);
     message[str_len]='\0';
     int state=atoi(message);
