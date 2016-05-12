@@ -34,17 +34,6 @@ void read_childproc(int sig);
 void handleClient(int clnt);
 void getFileFromC(int clnt);
 void getStatus(int clnt);
-int parseitems(char *cmdln,char items[][MAXLEN]){
-    int i=0;
-    char * pch=NULL;
-    pch=strtok(cmdln," \n");
-    while(pch != NULL && i<MAXLEN){
-        strcpy(items[i],pch);
-        pch=strtok(NULL," \n");
-        i++;
-    }
-    return i;
-}
 int main(int argc, char *argv[]){
     int serv_sock,clnt_sock;
     struct sockaddr_in serv_adr, clnt_adr;
@@ -204,7 +193,7 @@ void getFileFromC(int sock){
         printf("-----------size - %d\n",client->size);
         pthread_mutex_unlock(&(client->mutex));
         int status;
-        sprintf(message,"[%d] do your job!",pid);
+        sprintf(message,"%d",pid);
         write(sock,message,strlen(message));
         wait(&status);
         endTime=clock();
@@ -290,6 +279,7 @@ void handleClient(int sock){
     char message[BUFSIZE];
     str_len=read(sock,message,BUFSIZE-1);
     message[str_len]='\0';
+    printf("%s \n",message);
     char input=message[0];
     switch(input){
         case '1':
@@ -299,8 +289,13 @@ void handleClient(int sock){
             break;
         case '2':
             printf("%d select menu 2\n",getpid());
-     //     write(sock,"menu 2 selected",strlen("menu 2 selected"));
+            write(sock,"menu 2 selected",strlen("menu 2 selected"));
             getStatus(sock);
+            break;
+        case '3':
+            printf("%d select menu 3\n",getpid());
+ //           read(sock,message,BUFSIZE-1);
+            close(sock);
             break;
     }
 }
