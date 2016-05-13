@@ -56,7 +56,7 @@ int main(int argc, char *argv[]){
     if(bind(serv_sock,(struct sockaddr*)&serv_adr,sizeof(serv_adr))==-1){
         error_handling("bind error");
     }
-    if(listen(serv_sock,5)==-1){
+    if(listen(serv_sock,101)==-1){
         error_handling("listen error");
     }
     struct sigaction act;
@@ -80,7 +80,9 @@ int main(int argc, char *argv[]){
             continue;
         else
             puts("new client connected...");
+        pthread_mutex_lock(&(client->mutex));
         fileNum++;
+        pthread_mutex_unlock(&(client->mutex));
         pid=fork();
         if(pid==-1){
             close(clnt_sock);

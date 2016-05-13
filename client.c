@@ -11,11 +11,18 @@
 #define BUFSIZE 1024
 #define MAXLEN 100
 
+struct Param{
+    char file[MAXLEN];
+    struct sockaddr_in serv;
+};
 void error_handling(char *message);
 void showMenu();
 int sendFile(int sock,char *file);
 void checkProc(int sock,int pid);
-void testBench(struct sockaddr_in serv_adr, char *fileName);
+void* testBench(void *arg);
+
+struct Param *p; //shared memory;
+pthread_mutex_t mutex=PTHREAD_MUTEX_INITIALIZER;
 int main(int argc, char *argv[]){
     int sock;
     char message[BUFSIZE];
@@ -57,6 +64,13 @@ int main(int argc, char *argv[]){
     int num;
     int i;
     char inputFileName[MAXLEN];
+    int threadInt[101];
+    pthread_t p_thread[101];
+    p=malloc(sizeof(*p));
+    if(p==NULL){
+        printf("parma allocation error!\n");
+        exit(1);
+    }
     switch(input){
         case '1':
             //	printf("you selected menu 1\n");		
@@ -71,8 +85,16 @@ int main(int argc, char *argv[]){
             scanf("%d",&num);
             printf("send file name: ");
             scanf("%s",inputFileName);
-            for(i=0; i<num; i++)
-                testBench(serv_adr,inputFileName);
+            p->serv=serv_adr;
+            strcpy(p->file,inputFileName);
+            printf("%s\n",p->file);
+            if(num>100) num=100;
+            for(i=0; i<num; i++){
+                threadInt[i]=pthread_create(&p_thread[i],NULL,testBench,NULL);    
+            }
+            for(i=0; i<num; i++){
+                pthread_join(p_thread[i],NULL);
+            }
             break;
     }
 
@@ -84,22 +106,27 @@ int main(int argc, char *argv[]){
     close(sock);
     return 0;
 }
-void testBench(struct sockaddr_in serv,char *fileName){
+void *testBench(void *arg){
+    //mutex
+    pthread_mutex_lock(&mutex);
+    printf("%s\n",p->file);
+    pthread_mutex_unlock(&mutex);
+    //mutex
     int sock;
     sock=socket(PF_INET,SOCK_STREAM,0);
     if(sock<0){
        error_handling("sock make fail");
     }
-    if(connect(sock,(struct sockaddr*)&serv,sizeof(serv))==-1){
+    if(connect(sock,(struct sockaddr*)&p->serv,sizeof(p->serv))==-1){
         error_handling("connect error!");
     }
     else 
         puts("connected ......");
     write(sock,"1\0",strlen("1\0"));
-    int pid=sendFile(sock,fileName);
+    int pid=sendFile(sock,p->file);
     printf("%d\n",pid);
     sock=socket(PF_INET,SOCK_STREAM,0);
-     if(connect(sock,(struct sockaddr*)&serv,sizeof(serv))==-1){
+     if(connect(sock,(struct sockaddr*)&p->serv,sizeof(p->serv))==-1){
         error_handling("connect error!");
     }
     else 
