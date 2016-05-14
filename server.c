@@ -180,15 +180,10 @@ void getFileFromC(int sock){
         exit(1);
     }
     else{
-        close(pipefd[1]);
-        FILE *resultFd=fdopen(pipefd[0],"r");
-        sprintf(message,"%s.txt",fileName);
-        int fd2=open(message,O_WRONLY|O_CREAT,0777);
-        char fileBuf[BUFSIZE];
-
-        while(fgets(fileBuf,BUFSIZE,resultFd)){
-            write(fd2,fileBuf,strlen(fileBuf));
-        }
+	
+        sprintf(message,"%d",pid);
+        write(sock,message,strlen(message));
+       
         /*shared memory use*/
         pthread_mutex_lock(&(client->mutex));
         client->size++;
@@ -198,9 +193,15 @@ void getFileFromC(int sock){
         printf("-----------size - %d\n",client->size);
 
         pthread_mutex_unlock(&(client->mutex));
-        int status;
-        sprintf(message,"%d",pid);
-        write(sock,message,strlen(message));
+         close(pipefd[1]);
+        FILE *resultFd=fdopen(pipefd[0],"r");
+        sprintf(message,"%s.txt",fileName);
+        int fd2=open(message,O_WRONLY|O_CREAT,0777);
+        char fileBuf[BUFSIZE];
+
+        while(fgets(fileBuf,BUFSIZE,resultFd)){
+            write(fd2,fileBuf,strlen(fileBuf));
+        }int status;
         wait(&status);
         
         endTime=clock();
